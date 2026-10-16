@@ -12,7 +12,16 @@ const navigation = {
     ['Post a project', '/client/post-project'],
     ['Applications', '/client/applications'],
   ],
-  admin: [['Dashboard', '/admin/dashboard']],
+  admin: [
+    ['Users', '/admin/dashboard#users'],
+    ['Projects', '/admin/dashboard#projects'],
+    ['Reports', '/admin/dashboard#reports'],
+    ['Verification', '/admin/dashboard#verification'],
+  ],
+  workspace: [
+    ['Dashboard', '/student/dashboard'],
+    ['Projects', '/student/projects'],
+  ],
 }
 
 function Brand() {
@@ -63,13 +72,13 @@ function Navbar({ area }) {
         {area ? (
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm font-medium capitalize text-slate-700 sm:block">
-              {area === 'student' ? 'Alex Morgan' : `${area} account`}
+              {area === 'student' || area === 'workspace' ? 'Alex Morgan' : area === 'client' ? 'BrightPath Labs' : `${area} account`}
             </span>
             <span
               className="grid size-9 place-items-center rounded-full bg-amber-300 text-sm font-bold text-amber-950"
               aria-label="User avatar"
             >
-              {area === 'student' ? 'A' : area[0].toUpperCase()}
+              {area === 'student' || area === 'workspace' ? 'A' : area[0].toUpperCase()}
             </span>
           </div>
         ) : (

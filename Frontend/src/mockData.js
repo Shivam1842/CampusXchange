@@ -142,3 +142,87 @@ export const activeTeam = [
 ]
 
 export const projectCategories = ['All categories', 'Web', 'Mobile', 'Design', 'Data / AI']
+
+export const businessProfile = {
+  name: 'BrightPath Labs',
+  contact: 'Maya Chen',
+  initials: 'B',
+  verified: true,
+  industry: 'Education technology',
+  location: 'Boston, MA',
+  about: 'We partner with emerging talent to build practical tools that make campus life more connected and accessible.',
+}
+
+export const clientApplicants = [
+  {
+    id: 'jordan',
+    name: 'Jordan Lee',
+    type: 'Individual',
+    skills: ['React', 'Node.js', 'MongoDB'],
+    rating: 4.9,
+    completedProjects: 8,
+    match: 98,
+    color: 'bg-indigo-100 text-indigo-800',
+    bio: 'Full-stack developer focused on building reliable products for student communities.',
+  },
+  {
+    id: 'team-atlas',
+    name: 'Project Atlas',
+    type: 'Team',
+    skills: ['React', 'Figma', 'Product strategy'],
+    rating: 4.9,
+    completedProjects: 5,
+    match: 96,
+    color: 'bg-teal-100 text-teal-800',
+    bio: 'A three-person team pairing product design with frontend and backend development.',
+  },
+  {
+    id: 'sam',
+    name: 'Sam Rivera',
+    type: 'Individual',
+    skills: ['Figma', 'User research', 'Prototyping'],
+    rating: 5.0,
+    completedProjects: 6,
+    match: 91,
+    color: 'bg-rose-100 text-rose-800',
+    bio: 'Product designer who turns user insights into clear, accessible experiences.',
+  },
+  {
+    id: 'team-spark',
+    name: 'Team Spark',
+    type: 'Team',
+    skills: ['TypeScript', 'React', 'Accessibility'],
+    rating: 4.8,
+    completedProjects: 4,
+    match: 88,
+    color: 'bg-amber-100 text-amber-900',
+    bio: 'A student team experienced in accessible web apps and iterative delivery.',
+  },
+]
+
+export const workspaceTasks = [
+  { id: 'discovery', title: 'Finalize student discovery flows', assignee: 'Sam Rivera', status: 'Completed', due: 'Oct 20' },
+  { id: 'components', title: 'Build shared UI component library', assignee: 'Alex Morgan', status: 'In Progress', due: 'Oct 24' },
+  { id: 'api', title: 'Connect events and community API', assignee: 'Jordan Lee', status: 'In Progress', due: 'Oct 29' },
+  { id: 'qa', title: 'Run accessibility and mobile QA', assignee: 'Alex Morgan', status: 'Not Started', due: 'Nov 04' },
+]
+
+export const workspaceMessages = [
+  { id: 1, sender: 'Maya Chen', role: 'Client', text: 'The updated onboarding flow looks great. Could we make the campus selection step a little clearer?', time: '10:14 AM', color: 'bg-blue-100 text-blue-800' },
+  { id: 2, sender: 'Sam Rivera', role: 'Team', text: 'Absolutely. I’ll add a short helper message and share the revised prototype this afternoon.', time: '10:18 AM', color: 'bg-rose-100 text-rose-800' },
+  { id: 3, sender: 'Jordan Lee', role: 'Team', text: 'API endpoint is ready for the events feed. I’ve added the docs to the project files.', time: '10:31 AM', color: 'bg-indigo-100 text-indigo-800' },
+]
+
+export const adminReports = [
+  { id: 'verification-northstar', item: 'Northstar Learning', type: 'Business verification', submitted: '2 hours ago', status: 'Pending' },
+  { id: 'verification-student', item: 'Riley Thompson', type: 'Student verification', submitted: '5 hours ago', status: 'Pending' },
+  { id: 'report-project', item: 'Unclear project listing', type: 'Project report', submitted: 'Yesterday', status: 'Review needed' },
+  { id: 'report-profile', item: 'Profile content review', type: 'User report', submitted: 'Yesterday', status: 'Review needed' },
+]
+
+export const adminMetrics = [
+  { label: 'Total students', value: '12,480', change: '+12.8%', icon: 'users', color: 'bg-teal-50 text-teal-800' },
+  { label: 'Businesses', value: '1,264', change: '+8.4%', icon: 'building', color: 'bg-blue-50 text-blue-800' },
+  { label: 'Projects', value: '3,842', change: '+16.2%', icon: 'briefcase', color: 'bg-violet-50 text-violet-800' },
+  { label: 'Active projects', value: '684', change: '+5.7%', icon: 'activity', color: 'bg-amber-50 text-amber-800' },
+]
