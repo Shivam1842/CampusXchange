@@ -19,6 +19,16 @@ const projectSchema = new mongoose.Schema(
       maxlength: 5000,
     },
 
+    requirements: { type: [String], default: [] },
+    isDraft: { type: Boolean, default: false, index: true },
+    moderationStatus: { type: String, enum: ["approved", "pending", "removed"], default: "approved", index: true },
+    progress: { type: Number, min: 0, max: 100, default: 0 },
+    milestones: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    tasks: { type: [new mongoose.Schema({ title: { type: String, required: true, trim: true, maxlength: 200 }, description: { type: String, trim: true, maxlength: 1000, default: "" }, assignee: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, status: { type: String, enum: ["not_started", "in_progress", "completed"], default: "not_started" }, dueDate: { type: Date, default: null } }, { timestamps: true })], default: [] },
+    messages: { type: [new mongoose.Schema({ sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, text: { type: String, required: true, trim: true, maxlength: 5000 }, readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }] }, { timestamps: true })], default: [] },
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    selectionVersion: { type: Number, default: 0, select: false },
+
     category: {
       type: String,
       required: [true, "Project category is required."],
@@ -56,6 +66,13 @@ const projectSchema = new mongoose.Schema(
       default: "",
     },
 
+    budget: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
+
     applicationDeadline: {
       type: Date,
       default: null,
@@ -63,7 +80,13 @@ const projectSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["open", "in_progress", "completed", "cancelled"],
+      enum: [
+        "open",
+        "in_progress",
+        "under_review",
+        "completed",
+        "cancelled",
+      ],
       default: "open",
       index: true,
     },
@@ -75,11 +98,23 @@ const projectSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Retained for compatibility with existing project records.
     maxTeamSize: {
       type: Number,
       min: 1,
       max: 100,
       default: 5,
+    },
+
+    // New frontend field. Supports the legacy field's full range so
+    // existing records remain valid when updated.
+    studentsRequired: {
+      type: Number,
+      min: 1,
+      max: 100,
+      default: function () {
+        return this.maxTeamSize ?? 5;
+      },
     },
 
     isRemote: {
@@ -100,7 +135,12 @@ const projectSchema = new mongoose.Schema(
   }
 );
 
-projectSchema.index({ title: "text", description: "text", category: "text" });
+projectSchema.index({
+  title: "text",
+  description: "text",
+  category: "text",
+});
+
 projectSchema.index({ status: 1, createdAt: -1 });
 
 const Project = mongoose.model("Project", projectSchema);

@@ -1,0 +1,10 @@
+import express from "express";
+import { protect } from "../middleware/authMiddleware.js";
+import { listMyVerificationDocuments, submitVerification } from "../controllers/verificationController.js";
+import { createVerificationUpload as issueUpload } from "../controllers/uploadController.js";
+const router = express.Router();
+router.use(protect);
+router.get("/upload", issueUpload);
+router.get("/", listMyVerificationDocuments);
+router.post("/", submitVerification);
+export default router;

@@ -9,11 +9,14 @@ const statusStyles = {
 }
 
 export default function Badge({ children, tone, className = '' }) {
-  const style = tone ?? statusStyles[children] ?? 'bg-slate-100 text-slate-700 ring-slate-500/15'
+  const formatted = typeof children === 'string' && (/^[a-z]+(?:_[a-z]+)*$/.test(children) || children === 'Open')
+    ? children.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : children
+  const style = tone ?? statusStyles[formatted] ?? 'bg-slate-100 text-slate-700 ring-slate-500/15'
 
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${style} ${className}`}>
-      {children}
+      {formatted}
     </span>
   )
 }

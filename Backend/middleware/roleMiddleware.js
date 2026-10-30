@@ -5,6 +5,7 @@ export const authorize = (...allowedRoles) => {
       return res.status(401).json({
         success: false,
         message: "Authentication required.",
+        errors: [],
       });
     }
 
@@ -12,6 +13,7 @@ export const authorize = (...allowedRoles) => {
       return res.status(403).json({
         success: false,
         message: "You do not have permission to access this resource.",
+        errors: [],
       });
     }
 

@@ -8,6 +8,10 @@ import {
   getMe,
   changePassword,
   logout,
+  requestPasswordReset,
+  resetPassword,
+  verifyEmail,
+  googleSignIn,
 } from "../controllers/authController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -34,6 +38,10 @@ const authLimiter = rateLimit({
 // Public routes
 router.post("/register", authLimiter, validate(registerSchema), register);
 router.post("/login", authLimiter, validate(loginSchema), login);
+router.post("/forgot-password", authLimiter, requestPasswordReset);
+router.post("/reset-password", authLimiter, resetPassword);
+router.post("/verify-email", authLimiter, verifyEmail);
+router.post("/google", authLimiter, googleSignIn);
 
 // Protected routes
 router.get("/me", protect, getMe);

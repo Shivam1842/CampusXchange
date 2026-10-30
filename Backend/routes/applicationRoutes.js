@@ -42,6 +42,7 @@ router.get(
   authorize("student"),
   getMyApplications
 );
+router.get("/mine", protect, authorize("student"), getMyApplications);
 
 // Student: Withdraw their own application
 router.patch(

@@ -1,20 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, BriefcaseBusiness, CheckCircle2, GraduationCap, LockKeyhole, Mail } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Avatar from '../components/Avatar.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
-import { studentProfile } from '../mockData.js'
+import { auth, saveSession } from '../api.js'
 
 export default function AuthPage({ mode }) {
   const isRegister = mode === 'register'
   const [searchParams] = useSearchParams()
-  const defaultRole = searchParams.get('role') === 'business' ? 'business' : 'student'
+  const defaultRole = searchParams.get('role') === 'client' || searchParams.get('role') === 'business' ? 'client' : 'student'
   const [role, setRole] = useState(defaultRole)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotMessage, setForgotMessage] = useState('')
   const navigate = useNavigate()
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
     const form = new FormData(event.currentTarget)
@@ -24,8 +27,45 @@ export default function AuthPage({ mode }) {
       setError('Enter a valid email address and a password with at least 8 characters.')
       return
     }
-    navigate(role === 'business' ? '/client/post-project' : '/student/dashboard')
+    setLoading(true)
+    try {
+      const payload = isRegister
+        ? { name: form.get('name').toString().trim(), email, password, role }
+        : { email, password }
+      const result = isRegister ? await auth.register(payload) : await auth.login(payload)
+      saveSession(result.data)
+      const destination = {
+        admin: '/admin/dashboard',
+        client: '/client/post-project',
+        student: '/student/dashboard',
+      }[result.data.user.role] || '/'
+      navigate(destination, { replace: true })
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setLoading(false)
+    }
   }
+
+  async function sendReset(event) {
+    event.preventDefault(); setError(''); setForgotMessage('')
+    try { const email = new FormData(event.currentTarget).get('resetEmail').toString().trim(); const result = await auth.forgotPassword(email); setForgotMessage(result.message) }
+    catch (reason) { setError(reason.message) }
+  }
+
+  useEffect(() => {
+    if (isRegister || !import.meta.env.VITE_GOOGLE_CLIENT_ID) return undefined
+    let script = document.querySelector('script[data-google-identity]')
+    if (!script) { script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.defer = true; script.dataset.googleIdentity = 'true'; document.head.appendChild(script) }
+    const render = () => {
+      const mount = document.getElementById('google-signin-button')
+      if (!mount || !window.google?.accounts?.id) return
+      window.google.accounts.id.initialize({ client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID, callback: async ({ credential }) => { try { const result = await auth.google(credential, role); saveSession(result.data); navigate(role === 'client' ? '/client/post-project' : '/student/dashboard', { replace: true }) } catch (reason) { setError(reason.message) } } })
+      window.google.accounts.id.renderButton(mount, { theme: 'outline', size: 'large', width: 400, text: 'continue_with' })
+    }
+    script.addEventListener('load', render); render()
+    return () => script.removeEventListener('load', render)
+  }, [isRegister, role, navigate])
 
   return (
     <div className="grid min-h-[calc(100vh-9rem)] bg-slate-50 lg:grid-cols-2">
@@ -45,7 +85,7 @@ export default function AuthPage({ mode }) {
           </p>
           <Card className="mt-8 border-white/10 bg-white/5 p-5 text-white">
             <div className="flex items-start gap-3">
-              <Avatar name={studentProfile.name} size="sm" color="bg-amber-200 text-amber-950" />
+              <Avatar name="Alex Morgan" size="sm" color="bg-amber-200 text-amber-950" />
               <div>
                 <p className="text-sm leading-6 text-slate-200">“I found a team that challenged me and gave me a portfolio project I’m genuinely excited to share.”</p>
                 <p className="mt-3 text-xs font-semibold text-teal-200">Alex Morgan · Student builder</p>
@@ -72,7 +112,7 @@ export default function AuthPage({ mode }) {
           <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1.5" role="group" aria-label="Choose account type">
             {[
               { id: 'student', label: 'Student', icon: GraduationCap },
-              { id: 'business', label: 'Client / Business', icon: BriefcaseBusiness },
+              { id: 'client', label: 'Client / Business', icon: BriefcaseBusiness },
             ].map(({ id, label, icon: Icon }) => (
               <button
                 type="button"
@@ -105,7 +145,7 @@ export default function AuthPage({ mode }) {
             <div>
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <label htmlFor="password" className="text-sm font-medium text-slate-700">Password</label>
-                {!isRegister && <button type="button" onClick={() => setError('Password reset is not connected yet. Please contact support for help.')} className="text-xs font-semibold text-teal-700 hover:text-teal-900">Forgot password?</button>}
+                {!isRegister && <button type="button" onClick={() => { setForgotOpen((open) => !open); setError('') }} className="text-xs font-semibold text-teal-700 hover:text-teal-900">Forgot password?</button>}
               </div>
               <div className="relative">
                 <LockKeyhole size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -113,18 +153,17 @@ export default function AuthPage({ mode }) {
               </div>
             </div>
             {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
-            <Button type="submit" size="lg" className="w-full">
-              {isRegister ? 'Create account' : 'Sign in'}
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              {loading ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
             </Button>
           </form>
+          {forgotOpen && <form onSubmit={sendReset} className="mt-3 space-y-2 rounded-xl border bg-white p-4"><label htmlFor="reset-email" className="text-sm font-medium">Send a reset link</label><input id="reset-email" name="resetEmail" type="email" required defaultValue="" placeholder="you@example.com" className="w-full rounded-lg border p-2 text-sm"/><Button type="submit" variant="secondary">Send reset email</Button>{forgotMessage && <p role="status" className="text-sm text-emerald-700">{forgotMessage}</p>}</form>}
 
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div>
             <div className="relative flex justify-center"><span className="bg-slate-50 px-3 text-xs text-slate-400">or</span></div>
           </div>
-          <Button variant="secondary" size="lg" className="w-full" onClick={() => setError('Google sign-in will be available when authentication is connected.')}>
-            <span className="font-bold text-blue-600">G</span> Continue with Google
-          </Button>
+          {!isRegister && (import.meta.env.VITE_GOOGLE_CLIENT_ID ? <div id="google-signin-button" className="flex justify-center" /> : <p className="rounded-lg border bg-white p-3 text-center text-xs text-slate-500">Google sign-in is available after VITE_GOOGLE_CLIENT_ID is configured.</p>)}
           <p className="mt-6 text-center text-sm text-slate-600">
             {isRegister ? 'Already have an account?' : 'New to CampusXchange?'}{' '}
             <Link to={isRegister ? '/login' : '/register'} className="font-semibold text-teal-700 hover:text-teal-900">

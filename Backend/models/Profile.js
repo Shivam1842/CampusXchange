@@ -48,6 +48,24 @@ const educationSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const offeredSkillSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true, maxlength: 60 },
+  level: { type: String, enum: ["beginner", "intermediate", "advanced", "expert"], default: "beginner" },
+  proficiency: { type: Number, min: 0, max: 100, default: 0 },
+}, { _id: false });
+const certificationSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true, maxlength: 150 },
+  issuer: { type: String, trim: true, maxlength: 150, default: "" },
+  year: { type: Number, min: 1950, max: 2100 },
+}, { _id: false });
+const portfolioSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxlength: 150 },
+  category: { type: String, trim: true, maxlength: 80, default: "" },
+  description: { type: String, trim: true, maxlength: 1000, default: "" },
+  skills: { type: [String], default: [] },
+  url: { type: String, trim: true, maxlength: 500, default: "" },
+}, { _id: false });
+
 const profileSchema = new mongoose.Schema(
   {
     user: {
@@ -64,6 +82,14 @@ const profileSchema = new mongoose.Schema(
       maxlength: 120,
       default: "",
     },
+    university: { type: String, trim: true, maxlength: 150, default: "" },
+    course: { type: String, trim: true, maxlength: 150, default: "" },
+    year: { type: String, trim: true, maxlength: 40, default: "" },
+    experience: { type: String, trim: true, maxlength: 2000, default: "" },
+    availability: { type: String, trim: true, maxlength: 80, default: "" },
+    skills: { type: [offeredSkillSchema], default: [] },
+    certifications: { type: [certificationSchema], default: [] },
+    portfolio: { type: [portfolioSchema], default: [] },
 
     bio: {
       type: String,
@@ -115,6 +141,9 @@ const profileSchema = new mongoose.Schema(
       maxlength: 150,
       default: "",
     },
+    contactName: { type: String, trim: true, maxlength: 80, default: "" },
+    contactEmail: { type: String, trim: true, lowercase: true, maxlength: 254, default: "" },
+    contactPhone: { type: String, trim: true, maxlength: 40, default: "" },
 
     industry: {
       type: String,

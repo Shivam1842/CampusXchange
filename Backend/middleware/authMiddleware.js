@@ -10,6 +10,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Authentication required. Please log in.",
+        errors: [],
       });
     }
 
@@ -19,6 +20,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Authentication token is missing.",
+        errors: [],
       });
     }
 
@@ -36,6 +38,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "User account not found. Please log in again.",
+        errors: [],
       });
     }
 
@@ -43,6 +46,7 @@ export const protect = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: "Your account is suspended. Please contact support.",
+        errors: [],
       });
     }
 
@@ -57,6 +61,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: "Invalid or expired token. Please log in again.",
+        errors: [],
       });
     }
 

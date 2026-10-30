@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "suspended"],
+      enum: ["active", "suspended", "deleted"],
       default: "active",
       required: true,
     },
@@ -54,6 +54,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    emailVerificationTokenHash: { type: String, select: false },
+    emailVerificationExpiresAt: { type: Date, select: false },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpiresAt: { type: Date, select: false },
+    googleSubject: { type: String, unique: true, sparse: true, select: false },
 
     avatar: {
       type: String,

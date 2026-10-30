@@ -1,16 +1,27 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { auth, clearSession, getStoredUser } from '../api.js'
 
 const navigation = {
   student: [
     ['Dashboard', '/student/dashboard'],
     ['My profile', '/student/profile'],
     ['Partners', '/student/partners'],
+    ['Skill requests', '/student/skill-requests'],
     ['Teams', '/student/teams'],
     ['Projects', '/student/projects'],
+    ['My applications', '/student/applications'],
+    ['Notifications', '/student/notifications'],
+    ['Messages', '/student/messages'],
+    ['Verification', '/student/verification'],
   ],
   client: [
     ['Post a project', '/client/post-project'],
     ['Applications', '/client/applications'],
+    ['Manage projects', '/client/projects'],
+    ['Business profile', '/client/profile'],
+    ['Notifications', '/client/notifications'],
+    ['Messages', '/client/messages'],
+    ['Verification', '/client/verification'],
   ],
   admin: [
     ['Users', '/admin/dashboard#users'],
@@ -38,6 +49,13 @@ function Brand() {
 }
 
 function Navbar({ area }) {
+  const user = getStoredUser()
+  const navigate = useNavigate()
+  async function logout() {
+    try { await auth.logout() } catch { /* clear the local JWT even if the server is unavailable */ }
+    clearSession()
+    navigate('/login')
+  }
   const publicLinks = [
     ['Home', '/'],
     ['Projects', '/student/projects'],
@@ -72,14 +90,15 @@ function Navbar({ area }) {
         {area ? (
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm font-medium capitalize text-slate-700 sm:block">
-              {area === 'student' || area === 'workspace' ? 'Alex Morgan' : area === 'client' ? 'BrightPath Labs' : `${area} account`}
+              {user?.name || `${area} account`}
             </span>
             <span
               className="grid size-9 place-items-center rounded-full bg-amber-300 text-sm font-bold text-amber-950"
               aria-label="User avatar"
             >
-              {area === 'student' || area === 'workspace' ? 'A' : area[0].toUpperCase()}
+              {(user?.name || area).slice(0, 1).toUpperCase()}
             </span>
+            <button type="button" onClick={logout} className="text-xs font-semibold text-slate-600 hover:text-teal-800">Sign out</button>
           </div>
         ) : (
           <div className="flex shrink-0 items-center gap-2">

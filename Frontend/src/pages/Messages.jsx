@@ -1,0 +1,24 @@
+import { useEffect, useState } from 'react'
+import Card from '../components/Card.jsx'
+import PageHeading from '../components/PageHeading.jsx'
+import Button from '../components/Button.jsx'
+import { api } from '../api.js'
+import ReportButton from '../components/ReportButton.jsx'
+
+export default function Messages() {
+  const [conversations, setConversations] = useState([])
+  const [active, setActive] = useState('')
+  const [messages, setMessages] = useState([])
+  const [text, setText] = useState('')
+  const [recipientId, setRecipientId] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [error, setError] = useState('')
+  async function loadConversations() { try { const result = await api('/messages'); setConversations(result.data.conversations || []) } catch (reason) { setError(reason.message) } }
+  async function loadMessages(id) { try { const result = await api(`/messages/${id}/messages`); setMessages(result.data.messages || []) } catch (reason) { setError(reason.message) } }
+  useEffect(() => { void Promise.resolve().then(loadConversations) }, [])
+  async function start(event) { event.preventDefault(); try { const result = await api('/messages', { method: 'POST', body: { recipientId } }); setActive(result.data.conversationId); await loadMessages(result.data.conversationId); setRecipientId(''); await loadConversations(); setError('') } catch (reason) { setError(reason.message) } }
+  async function startProjectTeam(event) { event.preventDefault(); try { const result = await api('/messages/project-team', { method: 'POST', body: { projectId } }); setActive(result.data.conversationId); await loadMessages(result.data.conversationId); setProjectId(''); await loadConversations(); setError('') } catch (reason) { setError(reason.message) } }
+  async function send(event) { event.preventDefault(); if (!text.trim()) return; try { await api(`/messages/${active}/messages`, { method: 'POST', body: { text } }); setText(''); await loadMessages(active); await loadConversations() } catch (reason) { setError(reason.message) } }
+  return <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8"><PageHeading eyebrow="Private conversations" title="Messages" description="Message students, clients, and selected project collaborators."/>{error && <p role="alert" className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}<div className="grid gap-4 md:grid-cols-[280px_minmax(0,1fr)]"><Card className="p-4"><h2 className="font-bold">Conversations</h2><div className="my-3 space-y-2">{conversations.map((conversation) => { const other = conversation.participants.find((user) => String(user._id) !== String(JSON.parse(localStorage.getItem('campusxchange.user') || '{}').id)); return <button key={conversation.id} onClick={() => { setActive(conversation.id); void loadMessages(conversation.id) }} className={`w-full rounded-lg p-3 text-left ${active === conversation.id ? 'bg-teal-50' : 'bg-slate-50'}`}><span className="block font-semibold">{other?.name || conversation.project?.title || 'Project conversation'}</span><span className="block truncate text-xs text-slate-500">{conversation.latestMessage?.text || 'No messages yet'}</span></button> })}</div><form onSubmit={start} className="border-t pt-3"><label className="text-xs font-semibold" htmlFor="recipient">Start a conversation with user ID</label><input id="recipient" required value={recipientId} onChange={(event) => setRecipientId(event.target.value)} className="mt-2 w-full rounded-lg border p-2 text-sm"/><Button className="mt-2 w-full" type="submit">Start chat</Button></form><form onSubmit={startProjectTeam} className="mt-4 border-t pt-3"><label className="text-xs font-semibold" htmlFor="project-id">Start selected project team chat</label><input id="project-id" required value={projectId} onChange={(event) => setProjectId(event.target.value)} className="mt-2 w-full rounded-lg border p-2 text-sm"/><Button className="mt-2 w-full" type="submit" variant="secondary">Open team chat</Button></form></Card><Card className="flex min-h-[440px] flex-col p-4"><div className="flex-1 space-y-3 overflow-y-auto">{messages.map((message) => <article key={message.id} className="rounded-lg bg-slate-50 p-3"><p className="text-sm">{message.text}</p><p className="mt-1 text-xs text-slate-500">{message.sender?.name || 'Member'} · {new Date(message.createdAt).toLocaleString()} · {message.read ? 'Read' : 'Sent'}</p><ReportButton targetType="message" targetId={message.id}/></article>)}{!active && <p className="py-16 text-center text-sm text-slate-500">Select a conversation or start one.</p>}</div>{active && <form onSubmit={send} className="mt-4 flex gap-2 border-t pt-4"><input aria-label="Message" value={text} onChange={(event) => setText(event.target.value)} maxLength={5000} className="min-w-0 flex-1 rounded-lg border p-2"/><Button type="submit">Send</Button></form>}</Card></div></div>
+}
+

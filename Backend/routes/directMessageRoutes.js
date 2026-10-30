@@ -1,0 +1,11 @@
+import express from "express";
+import { protect } from "../middleware/authMiddleware.js";
+import { getMessages, listConversations, sendMessage, startDirectConversation, startProjectTeamConversation } from "../controllers/directMessageController.js";
+const router = express.Router();
+router.use(protect);
+router.get("/", listConversations);
+router.post("/project-team", startProjectTeamConversation);
+router.post("/", startDirectConversation);
+router.get("/:id/messages", getMessages);
+router.post("/:id/messages", sendMessage);
+export default router;

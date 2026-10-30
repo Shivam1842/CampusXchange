@@ -1,125 +1,53 @@
-import { useState } from 'react'
-import { Activity, Building2, BriefcaseBusiness, Check, ClipboardCheck, UserRound, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Activity, BriefcaseBusiness, Building2, Check, ClipboardCheck, Users } from 'lucide-react'
 import Badge from '../../components/Badge.jsx'
 import Button from '../../components/Button.jsx'
 import Card from '../../components/Card.jsx'
 import PageHeading from '../../components/PageHeading.jsx'
-import { adminMetrics, adminReports } from '../../mockData.js'
-
-const metricIcons = { users: Users, building: Building2, briefcase: BriefcaseBusiness, activity: Activity }
-const chartData = [
-  { label: 'May', value: 39 },
-  { label: 'Jun', value: 56 },
-  { label: 'Jul', value: 46 },
-  { label: 'Aug', value: 72 },
-  { label: 'Sep', value: 63 },
-  { label: 'Oct', value: 88 },
-]
+import { api } from '../../api.js'
 
 export default function AdminDashboard() {
-  const [items, setItems] = useState(adminReports)
-  const [reviewed, setReviewed] = useState([])
-  const [activeSection, setActiveSection] = useState('Overview')
-
-  function reviewItem(id) {
-    setReviewed((current) => current.includes(id) ? current : [...current, id])
-  }
-
-  function dismissItem(id) {
-    setItems((current) => current.filter((item) => item.id !== id))
-  }
-
-  return (
-    <div className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6 lg:px-8">
-      <PageHeading eyebrow="Platform overview" title="Admin dashboard" description="Monitor the community, projects, and requests that need attention." />
-      <nav className="mb-6 flex gap-2 overflow-x-auto border-b border-slate-200" aria-label="Admin dashboard sections">
-        {['Overview', 'Users', 'Projects', 'Reports', 'Verification'].map((section) => (
-          <a
-            key={section}
-            href={`#${section.toLowerCase()}`}
-            onClick={() => setActiveSection(section)}
-            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-              activeSection === section ? 'border-teal-700 text-teal-800' : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {section}
-          </a>
-        ))}
-      </nav>
-
-      <div id="overview" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {adminMetrics.map((metric) => {
-          const Icon = metricIcons[metric.icon]
-          const sectionId = metric.label === 'Total students' ? 'users' : metric.label === 'Projects' ? 'projects' : undefined
-          return (
-            <Card key={metric.label} id={sectionId} className="p-5">
-              <div className="flex items-start justify-between">
-                <span className={`grid size-10 place-items-center rounded-xl ${metric.color}`}><Icon size={19} /></span>
-                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">{metric.change}</span>
-              </div>
-              <p className="mt-5 text-2xl font-bold tracking-tight text-slate-900">{metric.value}</p>
-              <p className="mt-1 text-sm text-slate-500">{metric.label}</p>
-            </Card>
-          )
-        })}
-      </div>
-
-      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <Card className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><h2 className="font-bold text-slate-900">User registrations</h2><p className="mt-1 text-xs text-slate-500">New community members over the last six months</p></div>
-            <span className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">Last 6 months</span>
-          </div>
-          <div className="mt-7 flex h-56 items-end justify-between gap-3 border-b border-l border-slate-200 px-4 pb-0 pt-3">
-            {chartData.map((item) => (
-              <div key={item.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <span className="text-[10px] font-medium text-slate-400">{item.value * 31}</span>
-                <div className="w-full max-w-12 rounded-t-md bg-gradient-to-t from-teal-700 to-teal-500 transition-opacity hover:opacity-80" style={{ height: `${item.value}%` }} title={`${item.value * 31} new registrations`} />
-                <span className="mb-2 text-[11px] text-slate-500">{item.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500"><span className="size-2.5 rounded-sm bg-teal-600" /> New registrations</div>
-        </Card>
-
-        <div id="reports">
-          <Card id="verification" className="h-full overflow-hidden">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
-              <div><h2 className="font-bold text-slate-900">Pending verification &amp; reports</h2><p className="mt-1 text-xs text-slate-500">Review these items to keep the community trusted.</p></div>
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-50 text-amber-800"><ClipboardCheck size={18} /></span>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {items.length ? items.map((item) => (
-                <div key={item.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">{item.item}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <Badge tone={reviewed.includes(item.id) ? 'bg-emerald-50 text-emerald-800 ring-emerald-600/15' : item.type.includes('verification') ? 'bg-blue-50 text-blue-800 ring-blue-600/15' : 'bg-amber-50 text-amber-800 ring-amber-600/15'}>{reviewed.includes(item.id) ? 'Reviewed' : item.type}</Badge>
-                      <span className="text-[11px] text-slate-400">{item.submitted}</span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button size="sm" variant="secondary" disabled={reviewed.includes(item.id)} onClick={() => reviewItem(item.id)}>
-                      <Check size={13} /> {reviewed.includes(item.id) ? 'Reviewed' : 'Review'}
-                    </Button>
-                    <Button size="sm" variant="danger" onClick={() => dismissItem(item.id)}>Dismiss</Button>
-                  </div>
-                </div>
-              )) : (
-                <div className="px-6 py-12 text-center">
-                  <span className="mx-auto grid size-11 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Check size={20} /></span>
-                  <p className="mt-3 text-sm font-semibold text-slate-900">You’re all caught up</p>
-                  <p className="mt-1 text-xs text-slate-500">New reports and verification requests will appear here.</p>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500 sm:px-6">
-              <span>{items.filter((item) => !reviewed.includes(item.id)).length} items need attention</span>
-              <span className="inline-flex items-center gap-1"><UserRound size={13} /> Admin review queue</span>
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
+  const [metrics, setMetrics] = useState(null)
+  const [reports, setReports] = useState([])
+  const [users, setUsers] = useState([])
+  const [projects, setProjects] = useState([])
+  const [registrations, setRegistrations] = useState([])
+  const [activity, setActivity] = useState({ projectsCreated: [], applications: [], completedProjects: [] })
+  const [popularSkills, setPopularSkills] = useState([])
+  const [auditLogs, setAuditLogs] = useState([])
+  const [verificationDocuments, setVerificationDocuments] = useState([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [userSearch, setUserSearch] = useState('')
+  const [userRole, setUserRole] = useState('')
+  const [userStatus, setUserStatus] = useState('')
+  async function load() { try { const [metricResult, reportResult, userResult, projectResult, registrationResult, activityResult, skillResult, auditResult, verificationResult] = await Promise.all([api('/admin/metrics'), api('/admin/reports?page=1&limit=50'), api('/admin/users?page=1&limit=50'), api('/admin/projects?page=1&limit=50'), api('/admin/registrations'), api('/admin/activity'), api('/admin/popular-skills'), api('/admin/audit-logs?page=1&limit=50'), api('/admin/verification-documents')]); setMetrics(metricResult.data); setReports(reportResult.data.reports || []); setUsers(userResult.data.users || []); setProjects(projectResult.data.projects || []); setRegistrations(registrationResult.data.registrations || []); setActivity(activityResult.data); setPopularSkills(skillResult.data.skills || []); setAuditLogs(auditResult.data.auditLogs || []); setVerificationDocuments(verificationResult.data.documents || []); setError('') } catch (reason) { setError(reason.message) } finally { setLoading(false) } }
+  useEffect(() => { void Promise.resolve().then(load) }, [])
+  async function updateReport(report, status) { try { await api(`/admin/reports/${report.id}`, { method: 'PATCH', body: { status } }); setReports((items) => items.map((item) => item.id === report.id ? { ...item, status } : item)) } catch (reason) { setError(reason.message) } }
+  async function setVerification(user) { try { await api(`/admin/users/${user.id}/verify`, { method: 'PATCH', body: { isVerified: !user.isVerified } }); setUsers((items) => items.map((item) => item.id === user.id ? { ...item, isVerified: !user.isVerified } : item)) } catch (reason) { setError(reason.message) } }
+  async function setSuspension(user) { const status = user.status === 'suspended' ? 'active' : 'suspended'; try { await api(`/admin/users/${user.id}/suspend`, { method: 'PATCH', body: { status } }); setUsers((items) => items.map((item) => item.id === user.id ? { ...item, status } : item)) } catch (reason) { setError(reason.message) } }
+  async function moderate(project, moderationStatus) { try { await api(`/admin/projects/${project.id}/moderate`, { method: 'PATCH', body: { moderationStatus } }); setProjects((items) => items.map((item) => item.id === project.id ? { ...item, moderationStatus } : item)) } catch (reason) { setError(reason.message) } }
+  async function reviewVerification(document, status) { try { await api(`/admin/verification-documents/${document.id}`, { method: 'PATCH', body: { status } }); setVerificationDocuments((items) => items.map((item) => item.id === document.id ? { ...item, status } : item)) } catch (reason) { setError(reason.message) } }
+  async function openVerificationDocument(document) { try { const result = await api(`/admin/verification-documents/${document.id}/download`); window.open(result.data.url, '_blank', 'noopener,noreferrer') } catch (reason) { setError(reason.message) } }
+  async function searchUsers(event) { event.preventDefault(); try { const params = new URLSearchParams({ page: '1', limit: '50' }); if (userSearch.trim()) params.set('search', userSearch.trim()); if (userRole) params.set('role', userRole); if (userStatus) params.set('status', userStatus); const result = await api(`/admin/users?${params}`); setUsers(result.data.users || []) } catch (reason) { setError(reason.message) } }
+  async function deleteUser(user) { if (!window.confirm(`Delete ${user.name}'s account? Personal profile information will be removed.`)) return; try { await api(`/admin/users/${user.id}`, { method: 'DELETE' }); setUsers((items) => items.filter((item) => item.id !== user.id)) } catch (reason) { setError(reason.message) } }
+  const cards = metrics ? [
+    ['Total students', metrics.students, Users, 'bg-teal-50 text-teal-800'],
+    ['Clients', metrics.clients, Building2, 'bg-blue-50 text-blue-800'],
+    ['Projects', metrics.projects, BriefcaseBusiness, 'bg-violet-50 text-violet-800'],
+    ['Active projects', metrics.activeProjects, Activity, 'bg-amber-50 text-amber-800'],
+    ['Completed projects', metrics.completedProjects, Check, 'bg-emerald-50 text-emerald-800'],
+    ['Applications', metrics.applications, ClipboardCheck, 'bg-indigo-50 text-indigo-800'],
+    ['Verified users', metrics.verifiedUsers, Check, 'bg-cyan-50 text-cyan-800'],
+    ['Open reports', metrics.reports, ClipboardCheck, 'bg-rose-50 text-rose-800'],
+  ] : []
+  return <div className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6 lg:px-8"><PageHeading eyebrow="Platform overview" title="Admin dashboard" description="Review persisted platform metrics, projects, users, and reports."/>{error && <p role="alert" className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}{loading ? <Card className="p-8 text-sm text-slate-500">Loading admin data…</Card> : <>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, Icon, color]) => <Card key={label} className="p-5"><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon size={19}/></span><p className="mt-5 text-2xl font-bold">{value}</p><p className="mt-1 text-sm text-slate-500">{label}</p></Card>)}</div>
+    <div className="mt-5 grid items-start gap-5 xl:grid-cols-2"><Card className="p-5"><h2 className="font-bold">Registration history</h2><div className="mt-4 space-y-2">{registrations.map((item) => <div key={item.month} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span>{item.month}</span><strong>{item.count}</strong></div>)}</div><h3 className="mt-5 font-bold">Projects created</h3><div className="mt-3 space-y-2">{activity.projectsCreated.map((item) => <div key={item.month} className="flex justify-between text-sm"><span>{item.month}</span><strong>{item.count}</strong></div>)}</div><h3 className="mt-5 font-bold">Applications</h3><div className="mt-3 space-y-2">{activity.applications.map((item) => <div key={item.month} className="flex justify-between text-sm"><span>{item.month}</span><strong>{item.count}</strong></div>)}</div><h3 className="mt-5 font-bold">Completed projects</h3><div className="mt-3 space-y-2">{activity.completedProjects.map((item) => <div key={item.month} className="flex justify-between text-sm"><span>{item.month}</span><strong>{item.count}</strong></div>)}</div><h3 className="mt-5 font-bold">Popular skills</h3><div className="mt-3 flex flex-wrap gap-2">{popularSkills.map((item) => <Badge key={item.name}>{item.name} · {item.count}</Badge>)}</div></Card>
+    <Card className="overflow-hidden"><div className="flex items-start justify-between border-b p-5"><div><h2 className="font-bold">Reports queue</h2><p className="mt-1 text-xs text-slate-500">{metrics?.reports ?? 0} open or investigating reports</p></div><span className="grid size-9 place-items-center rounded-lg bg-amber-50 text-amber-800"><ClipboardCheck size={18}/></span></div><div className="divide-y">{reports.map((report) => <div key={report.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{report.targetType} report</p><p className="mt-1 text-sm text-slate-600">{report.reason}</p><Badge>{report.status}</Badge></div><div className="flex gap-2"><Button size="sm" variant="secondary" disabled={report.status === 'investigating'} onClick={() => updateReport(report, 'investigating')}><Check size={13}/>Investigate</Button><Button size="sm" variant="danger" disabled={report.status === 'closed'} onClick={() => updateReport(report, 'closed')}>Close</Button></div></div>)}{!reports.length && <p className="p-8 text-center text-sm text-slate-500">No reports are waiting for review.</p>}</div></Card>
+    <Card className="overflow-hidden"><div className="border-b p-5"><h2 className="font-bold">Users</h2><form onSubmit={searchUsers} className="mt-4 grid gap-2 sm:grid-cols-4"><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name or email" className="rounded-lg border p-2 text-sm"/><select value={userRole} onChange={(event) => setUserRole(event.target.value)} className="rounded-lg border bg-white p-2 text-sm"><option value="">All roles</option><option value="student">Student</option><option value="client">Client</option><option value="admin">Admin</option></select><select value={userStatus} onChange={(event) => setUserStatus(event.target.value)} className="rounded-lg border bg-white p-2 text-sm"><option value="">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option></select><Button type="submit">Search</Button></form></div><div className="divide-y">{users.map((user) => <div key={user.id} className="flex flex-wrap items-center gap-3 p-4"><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{user.name}</p><p className="text-xs text-slate-500">{user.email} · {user.role} · {user.status}</p></div><Button size="sm" variant="secondary" onClick={() => setVerification(user)}>{user.isVerified ? 'Unverify' : 'Verify'}</Button><Button size="sm" variant="danger" onClick={() => setSuspension(user)}>{user.status === 'suspended' ? 'Reactivate' : 'Suspend'}</Button><Button size="sm" variant="danger" onClick={() => deleteUser(user)}>Delete</Button></div>)}</div></Card>
+    <Card className="overflow-hidden"><div className="border-b p-5"><h2 className="font-bold">Project moderation</h2></div><div className="divide-y">{projects.map((project) => <div key={project.id} className="flex flex-wrap items-center gap-3 p-4"><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{project.title}</p><p className="text-xs text-slate-500">{project.moderationStatus} · {project.status}</p></div>{project.moderationStatus !== 'approved' && <Button size="sm" onClick={() => moderate(project, 'approved')}>Approve</Button>}{project.moderationStatus !== 'removed' && <Button size="sm" variant="danger" onClick={() => moderate(project, 'removed')}>Remove</Button>}</div>)}</div></Card>
+    <Card id="verification" className="overflow-hidden xl:col-span-2"><div className="border-b p-5"><h2 className="font-bold">Verification documents</h2></div><div className="divide-y">{verificationDocuments.map((document) => <div key={document.id} className="flex flex-wrap items-center gap-3 p-4"><div className="min-w-0 flex-1"><p className="font-semibold">{document.owner?.name || 'Account'} · {document.documentType}</p><p className="text-xs text-slate-500">{document.owner?.email} · {document.status}</p><button type="button" className="text-sm text-teal-700 underline" onClick={() => openVerificationDocument(document)}>Open secure download</button></div><Button size="sm" disabled={document.status === 'approved'} onClick={() => reviewVerification(document, 'approved')}>Approve</Button><Button size="sm" variant="danger" disabled={document.status === 'rejected'} onClick={() => reviewVerification(document, 'rejected')}>Reject</Button></div>)}{!verificationDocuments.length && <p className="p-6 text-center text-sm text-slate-500">No documents submitted.</p>}</div></Card>
+    <Card className="overflow-hidden xl:col-span-2"><div className="border-b p-5"><h2 className="font-bold">Audit log</h2></div><div className="divide-y">{auditLogs.map((item) => <div key={item.id} className="flex justify-between gap-3 p-3 text-sm"><span>{item.action} · {item.targetType}</span><time className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</time></div>)}</div></Card></div>
+  </>}</div>
 }

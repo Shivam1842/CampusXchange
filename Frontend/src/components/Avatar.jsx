@@ -17,7 +17,7 @@ function getInitials(name) {
     .toUpperCase()
 }
 
-export default function Avatar({ name, size = 'md', color, className = '' }) {
+export default function Avatar({ name, src, size = 'md', color, className = '' }) {
   const sizeClass = {
     sm: 'size-9 text-xs',
     md: 'size-11 text-sm',
@@ -31,7 +31,7 @@ export default function Avatar({ name, size = 'md', color, className = '' }) {
       className={`inline-grid shrink-0 place-items-center rounded-full font-bold ${sizeClass} ${colorClass} ${className}`}
       aria-label={`${name} avatar`}
     >
-      {getInitials(name)}
+      {src ? <img src={src} alt="" className="size-full rounded-full object-cover" /> : getInitials(name)}
     </span>
   )
 }

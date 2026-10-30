@@ -32,11 +32,13 @@ const teamSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         },
+
         role: {
           type: String,
           enum: ["owner", "member"],
           default: "member",
         },
+
         joinedAt: {
           type: Date,
           default: Date.now,
@@ -48,6 +50,7 @@ const teamSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    maxMembers: { type: Number, min: 1, max: 100, default: 5 },
 
     status: {
       type: String,
@@ -62,11 +65,9 @@ const teamSchema = new mongoose.Schema(
   }
 );
 
-// Helps find teams by owner and newest first.
+// Supports queries for a particular owner's teams,
+// sorted by creation date.
 teamSchema.index({ owner: 1, createdAt: -1 });
-
-// Prevents duplicate users from being added to the same team.
-teamSchema.index({ _id: 1, "members.user": 1 });
 
 const Team = mongoose.model("Team", teamSchema);
 

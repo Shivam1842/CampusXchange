@@ -1,159 +1,61 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Avatar from '../../components/Avatar.jsx'
 import Badge from '../../components/Badge.jsx'
 import Button from '../../components/Button.jsx'
 import Card from '../../components/Card.jsx'
 import PageHeading from '../../components/PageHeading.jsx'
 import SkillTag from '../../components/SkillTag.jsx'
-import { activeTeam, teamInvitations } from '../../mockData.js'
+import { api, getStoredUser } from '../../api.js'
 
 export default function Teams() {
-  const [invitations, setInvitations] = useState(teamInvitations)
-  const [team, setTeam] = useState(activeTeam)
-  const [createdTeam, setCreatedTeam] = useState(null)
-
-  function createTeam(event) {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const newTeam = {
-      name: formData.get('name').trim(),
-      description: formData.get('description').trim(),
-      skills: formData.get('skills').split(',').map((skill) => skill.trim()).filter(Boolean),
-    }
-    setCreatedTeam(newTeam)
-    event.currentTarget.reset()
+  const [teams, setTeams] = useState([])
+  const [discoverableTeams, setDiscoverableTeams] = useState([])
+  const [invitations, setInvitations] = useState([])
+  const [teamSearch, setTeamSearch] = useState('')
+  const [studentSearch, setStudentSearch] = useState('')
+  const [students, setStudents] = useState([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const user = getStoredUser()
+  async function refresh() {
+    try { const [teamResult, inviteResult, discoverResult] = await Promise.all([api('/teams/mine'), api('/teams/invitations/mine'), api('/teams?status=forming&limit=50')]); setTeams(teamResult.data.teams || []); setInvitations(inviteResult.data.invitations || []); setDiscoverableTeams(discoverResult.data.teams || []); setError('') }
+    catch (reason) { setError(reason.message) } finally { setLoading(false) }
   }
-
-  function respondToInvitation(invitation, accepted) {
-    setInvitations((current) => current.filter((item) => item.team !== invitation.team))
-    if (accepted) {
-      setTeam((current) => [
-        ...current,
-        { name: invitation.from, role: 'Invited teammate', skill: invitation.project, color: invitation.color },
-      ])
-    }
+  useEffect(() => { void Promise.resolve().then(refresh) }, [])
+  async function createTeam(event) { event.preventDefault(); const form = new FormData(event.currentTarget); try { await api('/teams', { method: 'POST', body: { name: form.get('name').toString(), description: form.get('description').toString(), skills: form.get('skills').toString().split(',').map((item) => item.trim()).filter(Boolean) } }); event.currentTarget.reset(); await refresh() } catch (reason) { setError(reason.message) } }
+  async function respond(invitation, action) { try { await api(`/teams/invitations/${invitation.id}/${action}`, { method: 'PATCH' }); await refresh() } catch (reason) { setError(reason.message) } }
+  async function invite(teamId, event) { event.preventDefault(); const form = new FormData(event.currentTarget); try { await api(`/teams/${teamId}/invitations`, { method: 'POST', body: { userId: form.get('userId') } }); event.currentTarget.reset() } catch (reason) { setError(reason.message) } }
+  async function changeStatus(team, status) { try { await api(`/teams/${team.id}/status`, { method: 'PATCH', body: { status } }); await refresh() } catch (reason) { setError(reason.message) } }
+  async function removeMember(teamId, userId) { try { await api(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' }); await refresh() } catch (reason) { setError(reason.message) } }
+  async function searchStudents(value) {
+    setStudentSearch(value)
+    if (!value.trim()) { setStudents([]); return }
+    try {
+      const result = await api(`/matching/partners?${new URLSearchParams({ search: value.trim(), limit: '20' })}`)
+      setStudents(result.data.partners || [])
+    } catch (reason) { setError(reason.message) }
   }
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-      <PageHeading eyebrow="Build together" title="Your teams" description="Bring different strengths together to make something great." />
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="space-y-5">
-          <Card className="p-5 sm:p-6">
-            <div className="mb-5">
-              <h2 className="text-base font-bold text-slate-900">Create a team</h2>
-              <p className="mt-1 text-sm text-slate-500">Start a team and let the right collaborators find you.</p>
-            </div>
-            <form onSubmit={createTeam} className="space-y-4">
-              <div>
-                <label htmlFor="team-name" className="mb-1.5 block text-sm font-medium text-slate-700">Team name</label>
-                <input id="team-name" name="name" required maxLength={60} placeholder="e.g. Project Atlas" className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
-              </div>
-              <div>
-                <label htmlFor="team-description" className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
-                <textarea id="team-description" name="description" required rows={3} maxLength={300} placeholder="What are you hoping to build together?" className="w-full resize-y rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
-              </div>
-              <div>
-                <label htmlFor="team-skills" className="mb-1.5 block text-sm font-medium text-slate-700">Required skills</label>
-                <input id="team-skills" name="skills" required placeholder="React, UI/UX, Product management" className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
-                <p className="mt-1.5 text-xs text-slate-400">Separate skills with commas.</p>
-              </div>
-              <Button type="submit" className="w-full">Create team</Button>
-            </form>
-            {createdTeam && (
-              <div role="status" className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-4">
-                <p className="text-sm font-semibold text-teal-900">{createdTeam.name} is ready</p>
-                <p className="mt-1 text-xs text-teal-800">{createdTeam.description}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">{createdTeam.skills.map((skill) => <SkillTag key={skill} variant="teal">{skill}</SkillTag>)}</div>
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-5 sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Team invitations</h2>
-              <Badge tone="bg-teal-50 text-teal-800 ring-teal-600/15">{invitations.length} pending</Badge>
-            </div>
-            {invitations.length ? (
-              <div className="space-y-3">
-                {invitations.map((invitation) => (
-                  <div key={invitation.team} className="rounded-lg border border-slate-100 p-4">
-                    <div className="flex items-start gap-3">
-                      <Avatar name={invitation.from} size="sm" color={invitation.color} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{invitation.team}</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          {invitation.from} invited you to collaborate on <span className="font-medium text-slate-700">{invitation.project}</span>
-                        </p>
-                        <div className="mt-3 flex gap-2">
-                          <Button size="sm" onClick={() => respondToInvitation(invitation, true)}>Accept</Button>
-                          <Button size="sm" variant="secondary" onClick={() => respondToInvitation(invitation, false)}>Decline</Button>
-                        </div>
-                      </div>
-                      <span className="text-[11px] text-slate-400">{invitation.date}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">You’re all caught up. New team invitations will appear here.</p>
-            )}
-          </Card>
-        </div>
-
-        <Card className="overflow-hidden">
-          <div className="border-b border-slate-100 p-5 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">Active team</p>
-                <h2 className="mt-1 text-lg font-bold text-slate-900">Campus Connect</h2>
-                <p className="mt-1 text-sm text-slate-500">Building a better campus community, together.</p>
-              </div>
-              <Badge>In Progress</Badge>
-            </div>
-          </div>
-          <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center gap-6">
-              <div><p className="text-xs text-slate-400">Team members</p><p className="mt-1 text-lg font-bold text-slate-900">{team.length}</p></div>
-              <div><p className="text-xs text-slate-400">Project deadline</p><p className="mt-1 text-sm font-semibold text-slate-800">Nov 18, 2026</p></div>
-              <div className="ml-auto flex -space-x-2">
-                {team.slice(0, 4).map((member) => <Avatar key={member.name} name={member.name} size="sm" color={`${member.color} ring-2 ring-white`} />)}
-              </div>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left">
-              <thead className="bg-slate-50">
-                <tr className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 sm:px-6">Member</th>
-                  <th className="px-4 py-3">Role</th>
-                  <th className="px-4 py-3">Skills</th>
-                  <th className="px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {team.map((member, index) => (
-                  <tr key={`${member.name}-${index}`}>
-                    <td className="px-5 py-4 sm:px-6">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={member.name} size="sm" color={member.color} />
-                        <span className="whitespace-nowrap text-sm font-semibold text-slate-800">{member.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-slate-600">{member.role}</td>
-                    <td className="px-4 py-4 text-sm text-slate-600">{member.skill}</td>
-                    <td className="px-4 py-4">
-                      <button type="button" disabled={member.name === 'Alex Morgan'} className="text-xs font-semibold text-teal-700 hover:text-teal-900 disabled:cursor-default disabled:text-slate-400">
-                        {member.name === 'Alex Morgan' ? 'You' : 'Message'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+  async function joinTeam(team) {
+    try { await api(`/teams/${team.id}/join`, { method: 'POST' }); await refresh() }
+    catch (reason) { setError(reason.message) }
+  }
+  async function leaveTeam(team) {
+    try { await api(`/teams/${team.id}/leave`, { method: 'POST' }); await refresh() }
+    catch (reason) { setError(reason.message) }
+  }
+  const filteredDiscoverableTeams = discoverableTeams.filter((team) => !teams.some((mine) => mine.id === team.id) && (!teamSearch.trim() || `${team.name} ${team.description} ${(team.skills || []).join(' ')}`.toLowerCase().includes(teamSearch.trim().toLowerCase())))
+  return <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8"><PageHeading eyebrow="Build together" title="Your teams" description="Bring different strengths together to make something great." action={<Link to="/student/applications" className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Applications &amp; workspaces</Link>}/>{error && <p role="alert" className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-slate-800">{error}</p>}
+    {loading ? <Card className="p-8 text-sm text-slate-500">Loading teams…</Card> : <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"><div className="space-y-5"><Card className="p-5 sm:p-6"><h2 className="mb-4 text-base font-bold">Create a team</h2><form onSubmit={createTeam} className="space-y-4"><label className="block text-sm">Team name<input name="name" required minLength={3} maxLength={80} className="mt-1 w-full rounded-lg border p-2.5"/></label><label className="block text-sm">Description<textarea name="description" rows={3} maxLength={1000} className="mt-1 w-full rounded-lg border p-2.5"/></label><label className="block text-sm">Required skills<input name="skills" placeholder="React, UI/UX" className="mt-1 w-full rounded-lg border p-2.5"/></label><Button type="submit" className="w-full">Create team</Button></form></Card>
+      <Card className="p-5 sm:p-6"><div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Team invitations</h2><Badge>{invitations.length} pending</Badge></div>{invitations.length ? invitations.map((item) => <div key={item.id} className="mb-3 rounded-lg border p-4"><p className="font-semibold">{item.team?.name || 'Team invitation'}</p><p className="mt-1 text-xs text-slate-500">Invited by {item.inviter?.name || 'a teammate'}</p><div className="mt-3 flex gap-2"><Button size="sm" onClick={() => respond(item, 'accept')}>Accept</Button><Button size="sm" variant="secondary" onClick={() => respond(item, 'reject')}>Decline</Button></div></div>) : <p className="text-sm text-slate-500">No pending invitations.</p>}</Card></div>
+      <div className="space-y-4">
+        <Card className="p-5">
+          <h2 className="font-bold">Find a team</h2>
+          <input value={teamSearch} onChange={(event) => setTeamSearch(event.target.value)} placeholder="Search teams or skills" className="mt-3 w-full rounded-lg border p-2.5 text-sm"/>
+          <div className="mt-3 space-y-2">{filteredDiscoverableTeams.map((team) => <div key={team.id} className="flex items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-semibold">{team.name}</p><p className="text-xs text-slate-500">{team.skills.join(', ')}</p></div><Button size="sm" onClick={() => joinTeam(team)}>Join</Button></div>)}{!filteredDiscoverableTeams.length && <p className="text-sm text-slate-500">No open teams match your search.</p>}</div>
         </Card>
+        {teams.length ? teams.map((team) => { const owner = team.owner?.id === user?.id; const member = team.members.some((item) => item.user?.id === user?.id); return <Card key={team.id} className="overflow-hidden"><div className="border-b p-5 sm:p-6"><p className="text-xs font-semibold uppercase text-teal-700">Team</p><div className="mt-1 flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{team.name}</h2><Badge>{team.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{team.description}</p><div className="mt-3 flex flex-wrap gap-1.5">{team.skills.map((skill) => <SkillTag key={skill} variant="teal">{skill}</SkillTag>)}</div>{owner && <div className="mt-4 flex flex-wrap gap-2">{team.status === 'forming' && <Button size="sm" onClick={() => changeStatus(team, 'active')}>Activate team</Button>}{team.status === 'active' && <Button size="sm" onClick={() => changeStatus(team, 'completed')}>Complete team</Button>}{['forming', 'active'].includes(team.status) && <Button size="sm" variant="danger" onClick={() => changeStatus(team, 'disbanded')}>Disband</Button>}</div>}{member && !owner && ['forming', 'active'].includes(team.status) && <Button size="sm" variant="danger" className="mt-4" onClick={() => leaveTeam(team)}>Leave team</Button>}</div><div className="divide-y">{team.members.map((item) => <div key={item.id} className="flex items-center gap-3 p-4"><Avatar name={item.user?.name || 'Member'} size="sm"/><div className="flex-1"><p className="text-sm font-semibold">{item.user?.name || 'Member'}</p><p className="text-xs text-slate-500">{item.role}</p></div>{owner && item.role !== 'owner' && <Button size="sm" variant="danger" onClick={() => removeMember(team.id, item.user.id)}>Remove</Button>}</div>)}</div>{owner && <form onSubmit={(event) => invite(team.id, event)} className="space-y-2 border-t p-4"><label className="block text-xs font-medium">Search students to invite<input value={studentSearch} onChange={(event) => searchStudents(event.target.value)} placeholder="Search by name or skill" className="mt-1 w-full rounded-lg border p-2 text-sm"/></label><select name="userId" required defaultValue="" className="w-full rounded-lg border bg-white p-2 text-sm"><option value="">Select a student</option>{students.map((student) => <option key={student.id} value={student.id}>{student.name} — {student.title || student.headline || 'Student'}</option>)}</select><Button type="submit" size="sm">Send invitation</Button></form>}</Card>}) : <Card className="p-8 text-center text-sm text-slate-500">You are not a member of any team yet. Create a team or accept an invitation.</Card>}
       </div>
-    </div>
-  )
+    </div>}
+  </div>
 }

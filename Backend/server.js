@@ -12,6 +12,17 @@ import profileRoutes from "./routes/profileRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
+import skillRequestRoutes from "./routes/skillRequestRoutes.js";
+import matchingRoutes from "./routes/matchingRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import communityRoutes from "./routes/communityRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import { notifyUpcomingDeadlines } from "./utils/deadlineNotifications.js";
+import { apiErrorHandler } from "./middleware/errorHandler.js";
+import directMessageRoutes from "./routes/directMessageRoutes.js";
+import verificationRoutes from "./routes/verificationRoutes.js";
 
 // DNS workaround for MongoDB Atlas SRV resolution
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -81,56 +92,26 @@ app.use("/api/v1/profiles", profileRoutes);
 app.use("/api/v1/projects", projectRoutes);
 app.use("/api/v1/applications", applicationRoutes);
 app.use("/api/v1/teams", teamRoutes);
+app.use("/api/v1/skill-requests", skillRequestRoutes);
+app.use("/api/v1/matching", matchingRoutes);
+app.use("/api/v1/students", studentRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/messages", directMessageRoutes);
+app.use("/api/v1/verification-documents", verificationRoutes);
+app.use("/api/v1", communityRoutes);
 
 // Handle unknown routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: "API endpoint not found.",
+    errors: [],
   });
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid JSON request body.",
-    });
-  }
-
-  if (err.name === "ValidationError") {
-    return res.status(400).json({
-      success: false,
-      message: "Submitted data failed validation.",
-    });
-  }
-
-  if (err.name === "CastError") {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid resource identifier.",
-    });
-  }
-
-  if (err.code === 11000) {
-    return res.status(409).json({
-      success: false,
-      message: "A record with that value already exists.",
-    });
-  }
-
-  logger.error("API request failed", err);
-
-  return res.status(500).json({
-    success: false,
-    message: "An unexpected server error occurred.",
-  });
-});
+app.use(apiErrorHandler);
 
 // Connect to MongoDB before starting the server
 const startServer = async () => {
@@ -143,6 +124,11 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       logger.info(`CampusXchange server running on port ${PORT}`);
+      const checkDeadlines = () => notifyUpcomingDeadlines().catch((error) => {
+        logger.error("Upcoming project deadline notifications could not be created.", error);
+      });
+      void checkDeadlines();
+      setInterval(checkDeadlines, 60 * 60 * 1000);
     });
   } catch (error) {
     const errorCode = error?.code;

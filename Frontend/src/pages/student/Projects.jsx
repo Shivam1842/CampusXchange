@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Badge from '../../components/Badge.jsx'
 import Card from '../../components/Card.jsx'
 import PageHeading from '../../components/PageHeading.jsx'
 import SkillTag from '../../components/SkillTag.jsx'
-import { activeProjects, projectCategories } from '../../mockData.js'
+import { projectApi } from '../../api.js'
 
-const allSkills = [...new Set(activeProjects.flatMap((project) => project.skills))].sort()
+const projectCategories = ['All categories']
 
 function ProjectCard({ project }) {
   return (
@@ -23,16 +23,17 @@ function ProjectCard({ project }) {
       <div className="flex flex-1 flex-col p-5">
         <p className="text-sm leading-6 text-slate-600">{project.description}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {project.skills.map((skill) => <SkillTag key={skill} variant="teal">{skill}</SkillTag>)}
+          {(project.skills || []).map((skill) => <SkillTag key={skill} variant="teal">{skill}</SkillTag>)}
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Client</p>
-            <p className="mt-1 truncate text-sm font-medium text-slate-700">{project.client}</p>
+            <p className="mt-1 truncate text-sm font-medium text-slate-700">{project.client?.businessName || project.client?.name || 'Client'}</p>
+            {project.client?.isVerified && <Badge tone="bg-emerald-50 text-emerald-800">Verified</Badge>}
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Deadline</p>
-            <p className="mt-1 text-sm font-medium text-slate-700">{project.deadline}</p>
+            <p className="mt-1 text-sm font-medium text-slate-700">{project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Flexible'}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Duration</p>
@@ -59,19 +60,30 @@ export default function Projects() {
   const [skill, setSkill] = useState('Any skill')
   const [deadline, setDeadline] = useState('Any deadline')
   const [query, setQuery] = useState('')
-
-  const filteredProjects = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    const deadlineLimit = new Date()
-    deadlineLimit.setDate(deadlineLimit.getDate() + 30)
-    return activeProjects.filter((project) => {
-      if (category !== 'All categories' && project.category !== category) return false
-      if (skill !== 'Any skill' && !project.skills.includes(skill)) return false
-      if (deadline === 'Next 30 days' && new Date(project.deadline) > deadlineLimit) return false
-      if (normalizedQuery && ![project.title, project.client, project.description, ...project.skills].some((value) => value.toLowerCase().includes(normalizedQuery))) return false
-      return project.status === 'Open'
-    })
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const allSkills = useMemo(() => [...new Set(projects.flatMap((project) => project.skills || []))].sort(), [projects])
+  const categories = useMemo(() => [...projectCategories, ...new Set(projects.map((item) => item.category).filter(Boolean))], [projects])
+  useEffect(() => {
+    const params = { page: '1', limit: '50' }
+    if (category !== 'All categories') params.category = category
+    if (skill !== 'Any skill') params.skill = skill
+    if (query.trim()) params.q = query.trim()
+    if (deadline === 'Next 30 days') {
+      const date = new Date(); date.setDate(date.getDate() + 30)
+      params.deadlineBefore = date.toISOString()
+    }
+    let active = true
+    void Promise.resolve().then(() => {
+      if (active) { setLoading(true); setError('') }
+      return projectApi.list(params)
+    }).then((result) => { if (active) setProjects(result.data.projects || []) })
+      .catch((requestError) => { if (active) setError(requestError.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [category, deadline, query, skill])
+  const filteredProjects = projects
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6 lg:px-8">
@@ -80,7 +92,7 @@ export default function Projects() {
         <Card className="p-4">
           <h2 className="px-2 text-sm font-bold text-slate-900">Categories</h2>
           <nav className="mt-3 space-y-1" aria-label="Project categories">
-            {projectCategories.map((item) => (
+            {categories.map((item) => (
               <button
                 type="button"
                 key={item}
@@ -98,9 +110,7 @@ export default function Projects() {
           <div className="mt-5 border-t border-slate-100 pt-4">
             <p className="px-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Your skills</p>
             <div className="mt-3 flex flex-wrap gap-1.5 px-1">
-              <SkillTag variant="teal">React</SkillTag>
-              <SkillTag variant="teal">Figma</SkillTag>
-              <SkillTag variant="teal">TypeScript</SkillTag>
+              {allSkills.slice(0, 6).map((item) => <SkillTag key={item} variant="teal">{item}</SkillTag>)}
             </div>
           </div>
         </Card>
@@ -136,7 +146,7 @@ export default function Projects() {
             <p className="text-sm text-slate-600"><span className="font-semibold text-slate-900">{filteredProjects.length}</span> open projects</p>
             <span className="text-xs text-slate-400">Sorted by best match</span>
           </div>
-          {filteredProjects.length ? (
+          {loading ? <Card className="p-10 text-center text-sm text-slate-500">Loading projects…</Card> : error ? <Card className="p-8 text-center text-sm text-rose-700" role="alert">{error}</Card> : filteredProjects.length ? (
             <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
               {filteredProjects.map((project) => <ProjectCard key={project.id} project={project} />)}
             </div>

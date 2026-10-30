@@ -5,13 +5,14 @@ import Button from '../../components/Button.jsx'
 import Card from '../../components/Card.jsx'
 import PageHeading from '../../components/PageHeading.jsx'
 import SkillTag from '../../components/SkillTag.jsx'
-import { businessProfile } from '../../mockData.js'
+import { api, getStoredUser } from '../../api.js'
 
 const initialProject = {
   title: '',
   description: '',
   category: 'Web',
   duration: '4-6 weeks',
+  requirements: '',
   skills: '',
   studentsRequired: '2',
   deadline: '',
@@ -21,6 +22,9 @@ const initialProject = {
 export default function PostProject() {
   const [project, setProject] = useState(initialProject)
   const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const user = getStoredUser()
   const skills = useMemo(
     () => project.skills.split(',').map((skill) => skill.trim()).filter(Boolean),
     [project.skills],
@@ -30,11 +34,24 @@ export default function PostProject() {
     const { name, value } = event.target
     setProject((current) => ({ ...current, [name]: value }))
     setNotice('')
+    setError('')
   }
 
-  function submitProject(event) {
+  async function saveProject(event, isDraft = false) {
     event.preventDefault()
-    setNotice('Your project details are ready for review. Publishing will be available when your client account is connected.')
+    setLoading(true); setError(''); setNotice('')
+    try {
+      await api('/projects', { method: 'POST', body: {
+        title: project.title.trim(), description: project.description.trim(), category: project.category,
+        duration: project.duration, skills, studentsRequired: Number(project.studentsRequired),
+        requirements: project.requirements.split('\n').map((item) => item.trim()).filter(Boolean),
+        deadline: project.deadline ? new Date(`${project.deadline}T23:59:59`).toISOString() : null,
+        budget: project.budget.trim(), isDraft,
+      } })
+      setNotice(isDraft ? 'Draft saved to your account.' : 'Project published and is now visible to students.')
+      if (!isDraft) setProject(initialProject)
+    } catch (requestError) { setError(requestError.message) }
+    finally { setLoading(false) }
   }
 
   return (
@@ -45,11 +62,12 @@ export default function PostProject() {
           {notice}
         </div>
       )}
+      {error && <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <Card className="p-5 sm:p-7">
           <h2 className="text-lg font-bold text-slate-900">Project details</h2>
           <p className="mt-1 text-sm text-slate-500">Clear project details help students decide if they’re a good fit.</p>
-          <form onSubmit={submitProject} className="mt-6 space-y-5">
+          <form onSubmit={(event) => saveProject(event)} className="mt-6 space-y-5">
             <div>
               <label htmlFor="project-title" className="mb-1.5 block text-sm font-medium text-slate-700">Project title</label>
               <input id="project-title" name="title" value={project.title} onChange={updateField} required maxLength={100} placeholder="e.g. Campus Connect student platform" className="w-full rounded-lg border border-slate-300 px-3.5 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
@@ -58,6 +76,10 @@ export default function PostProject() {
               <label htmlFor="project-description" className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
               <textarea id="project-description" name="description" value={project.description} onChange={updateField} required minLength={30} maxLength={1500} rows={5} placeholder="Describe the challenge, your goals, and what the team will create..." className="w-full resize-y rounded-lg border border-slate-300 px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
               <p className="mt-1 text-right text-xs text-slate-400">{project.description.length}/1500</p>
+            </div>
+            <div>
+              <label htmlFor="project-requirements" className="mb-1.5 block text-sm font-medium text-slate-700">Project requirements</label>
+              <textarea id="project-requirements" name="requirements" value={project.requirements} onChange={updateField} maxLength={3000} rows={4} placeholder="Add one requirement per line" className="w-full resize-y rounded-lg border border-slate-300 px-3.5 py-3 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100" />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -93,8 +115,8 @@ export default function PostProject() {
               </div>
             </div>
             <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={() => setNotice('Draft saved in this session. Your details remain in the form for editing.')}>Save draft</Button>
-              <Button type="submit">Submit project for review</Button>
+              <Button type="button" variant="secondary" disabled={loading} onClick={(event) => saveProject(event, true)}>Save draft</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Publish project'}</Button>
             </div>
           </form>
         </Card>
@@ -110,11 +132,11 @@ export default function PostProject() {
             </div>
             <div className="space-y-5 p-5">
               <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-xl bg-teal-50 text-sm font-bold text-teal-800">{businessProfile.initials}</span>
+                <span className="grid size-11 place-items-center rounded-xl bg-teal-50 text-sm font-bold text-teal-800">{(user?.name || 'Client').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">{businessProfile.name}</p>
+                  <p className="truncate text-sm font-semibold text-slate-900">{user?.name || 'Your client account'}</p>
                   <p className="flex items-center gap-1 text-xs text-slate-500">
-                    {businessProfile.verified && <><BadgeCheck size={13} className="text-teal-700" /> Verified client · </>}{businessProfile.industry}
+                    {user?.isVerified && <><BadgeCheck size={13} className="text-teal-700" /> Verified client · </>}Client
                   </p>
                 </div>
               </div>

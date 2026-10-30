@@ -9,12 +9,14 @@ const applicationSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+
     applicant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
+
     coverLetter: {
       type: String,
       required: true,
@@ -22,16 +24,33 @@ const applicationSchema = new mongoose.Schema(
       minlength: 20,
       maxlength: 3000,
     },
+
+    portfolioLink: { type: String, trim: true, maxlength: 500, default: "" },
+    type: { type: String, enum: ["individual", "team"], default: "individual" },
+    team: { type: mongoose.Schema.Types.ObjectId, ref: "Team", default: null },
+    skills: { type: [{ type: String, trim: true, maxlength: 60 }], default: [] },
+    previousProjects: { type: [{ type: String, trim: true, maxlength: 200 }], default: [] },
+    availability: { type: String, trim: true, maxlength: 80, default: "" },
+    selectedAt: { type: Date, default: null },
+
     proposedContribution: {
       type: String,
       trim: true,
       maxlength: 1000,
       default: "",
     },
+
     status: {
       type: String,
-      enum: ["pending", "shortlisted", "accepted", "rejected", "withdrawn"],
-      default: "pending",
+      enum: [
+        "applied",
+        "under_review",
+        "shortlisted",
+        "selected",
+        "rejected",
+        "withdrawn",
+      ],
+      default: "applied",
       index: true,
     },
   },

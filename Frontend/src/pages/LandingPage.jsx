@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { ArrowRight, BriefcaseBusiness, Check, Code2, GraduationCap, Lightbulb, Sparkles, Users, WandSparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Card from '../components/Card.jsx'
+import { projectApi } from '../api.js'
 
 const steps = [
   { number: '01', title: 'Create your profile', text: 'Share your strengths, interests, and the skills you want to grow.', icon: GraduationCap },
@@ -9,14 +11,9 @@ const steps = [
   { number: '04', title: 'Make it real', text: 'Work on meaningful projects, learn by doing, and show what you can do.', icon: Code2 },
 ]
 
-const statistics = [
-  { value: '12k+', label: 'Student builders' },
-  { value: '1,200+', label: 'Partner businesses' },
-  { value: '3,800+', label: 'Projects launched' },
-  { value: '92%', label: 'Would collaborate again' },
-]
-
 export default function LandingPage() {
+  const [spotlight, setSpotlight] = useState(null)
+  useEffect(() => { projectApi.list({ page: '1', limit: '1' }).then((result) => setSpotlight(result.data.projects?.[0] || null)).catch(() => setSpotlight(null)) }, [])
   return (
     <>
       <section className="relative isolate overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 text-white">
@@ -38,7 +35,7 @@ export default function LandingPage() {
               <Link to="/register?role=student" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-teal-800 sm:w-auto">
                 <GraduationCap size={18} /> I am a Student <ArrowRight size={16} />
               </Link>
-              <Link to="/register?role=business" className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto">
+              <Link to="/register?role=client" className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto">
                 <BriefcaseBusiness size={18} /> I am a Business
               </Link>
             </div>
@@ -55,39 +52,29 @@ export default function LandingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">Project spotlight</p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-900">Campus Connect</h2>
+                  <h2 className="mt-1 text-xl font-bold text-slate-900">{spotlight?.title || 'Find a project to build'}</h2>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Open team spots</span>
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{spotlight ? 'Open project' : 'Opportunities'}</span>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">Build a welcoming platform to help new students discover campus communities.</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{spotlight?.description || 'Browse active client projects and find a real challenge that fits your skills.'}</p>
               <div className="mt-5 flex flex-wrap gap-2">
-                {['Product design', 'React', 'Community'].map((tag) => (
+                {(spotlight?.skills || []).slice(0, 5).map((tag) => (
                   <span key={tag} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{tag}</span>
                 ))}
               </div>
               <div className="mt-6 rounded-xl bg-slate-50 p-4">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Your collaboration circle</span>
-                  <span className="text-teal-700">4 skills matched</span>
+                  <span className="font-semibold text-slate-700">Client</span>
+                  <span className="text-teal-700">{spotlight?.client?.name || 'CampusXchange'}</span>
                 </div>
-                <div className="mt-4 flex items-center">
-                  {[
-                    ['AM', 'bg-amber-100 text-amber-900'],
-                    ['JL', 'bg-indigo-100 text-indigo-800'],
-                    ['SR', 'bg-rose-100 text-rose-800'],
-                    ['TK', 'bg-cyan-100 text-cyan-800'],
-                  ].map(([initials, style]) => (
-                    <span key={initials} className={`-ml-2 grid size-10 place-items-center rounded-full border-2 border-white text-xs font-bold first:ml-0 ${style}`}>{initials}</span>
-                  ))}
-                  <span className="ml-3 text-xs text-slate-500">Designers, developers &amp; dreamers</span>
-                </div>
+                <p className="mt-4 text-xs text-slate-500">{spotlight ? `${spotlight.studentsRequired || 1} student spot${spotlight.studentsRequired === 1 ? '' : 's'} · ${spotlight.category}` : 'New opportunities will appear as clients publish projects.'}</p>
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                   <span className="grid size-7 place-items-center rounded-lg bg-teal-50 text-teal-800"><WandSparkles size={15} /></span>
                   Better together, by design
                 </div>
-                <Link to="/student/projects/campus-connect" className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900">
+                <Link to={spotlight ? `/student/projects/${spotlight.id}` : '/student/projects'} className="inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900">
                   Explore <ArrowRight size={14} />
                 </Link>
               </div>
@@ -116,16 +103,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="about" className="border-y border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 md:grid-cols-4 lg:px-8">
-          {statistics.map((statistic) => (
-            <div key={statistic.label} className="text-center">
-              <p className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{statistic.value}</p>
-              <p className="mt-2 text-xs font-medium text-slate-500 sm:text-sm">{statistic.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
       <section className="mx-auto max-w-5xl px-4 py-14 text-center sm:px-6 lg:px-8">
         <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Your next collaboration starts here.</h2>
         <p className="mt-3 text-sm text-slate-600">Bring your curiosity. We’ll help you find the right people to build with.</p>
